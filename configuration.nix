@@ -16,14 +16,6 @@
 
   # Nixpkgs
   nixpkgs.config.allowUnfree = true; # Allow installation of unfree packages
-  nixpkgs.config.packageOverrides = pkgs: { # Customize packages
-    environment.plasma6.excludePackages = with pkgs.kdePackages; [
-      elisa
-      kate
-      khelpcenter
-      plasma-browser-integration
-    ];
-  };
 
   # Localization & Time
   time.timeZone = "America/New_York"; # Set your time zone
@@ -168,9 +160,15 @@
     # Desktop Tools & Utilities
     blender        # 3D creation suite
     gearlever      # Manage AppImages
-    kdePackages.koi # Image viewer from KDE Gear
+    kdePackages.haruna # Video player from KDE Gear
+    kdePackages.kdenlive # Video editing software from KDE Gear
+    kdePackages.kdiff3 # File comparison tool from KDE Gear
     kdePackages.kfind # File search utility from KDE Gear
-    mesa-demos     # OpenGL/Mesa demos (e.g., glxinfo, glxgears)
+    kdePackages.kleopatra # Encryption and signing tool from KDE Gear
+    kdePackages.koi # Image viewer from KDE Gear
+    kdePackages.krita # Digital painting application from KDE Gear
+    kdePackages.kwave # Audio editor from KDE Gear
+    kdePackages.partitionmanager # Disk partitioning tool from KDE Gear
     supergfxctl-plasmoid # Plasma widget for supergfxctl
 
     # Browsers
