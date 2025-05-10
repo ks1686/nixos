@@ -160,13 +160,13 @@
     # Desktop Tools & Utilities
     blender        # 3D creation suite
     gearlever      # Manage AppImages
-    kdePackages.haruna # Video player from KDE Gear
+    haruna # Video player from KDE Gear
     kdePackages.kdenlive # Video editing software from KDE Gear
-    kdePackages.kdiff3 # File comparison tool from KDE Gear
+    kdiff3 # File comparison tool from KDE Gear
     kdePackages.kfind # File search utility from KDE Gear
     kdePackages.kleopatra # Encryption and signing tool from KDE Gear
     kdePackages.koi # Image viewer from KDE Gear
-    kdePackages.krita # Digital painting application from KDE Gear
+    krita # Digital painting application from KDE Gear
     kdePackages.kwave # Audio editor from KDE Gear
     kdePackages.partitionmanager # Disk partitioning tool from KDE Gear
     supergfxctl-plasmoid # Plasma widget for supergfxctl
