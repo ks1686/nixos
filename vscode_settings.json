@@ -1,0 +1,27 @@
+{
+  "security.workspace.trust.untrustedFiles": "open",
+
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.fontFamily": "'Hack Nerd Font', 'monospace', monospace",
+  "window.autoDetectColorScheme": true,
+  "workbench.preferredLightColorTheme": "Atom One Light",
+  "workbench.preferredDarkColorTheme": "Atom One Dark",
+  "update.showReleaseNotes": false,
+
+  "workbench.iconTheme": "material-icon-theme",
+  "workbench.colorTheme": "Atom One Dark",
+
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff"
+  },
+  "[nix]": {
+    "editor.formatOnSave": false,
+    "editor.defaultFormatter": "jnoortheen.nix-ide"
+  },
+  "[fish]": {
+    "editor.defaultFormatter": "bmalehorn.vscode-fish"
+  },
+  "explorer.confirmDelete": false,
+  "git.autofetch": true
+}
