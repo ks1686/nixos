@@ -123,6 +123,8 @@
       "networkmanager"
       "wheel"
       "docker"
+      "kvm"
+      "adbusers"
     ]; # Sudo, network, docker access
     shell = pkgs.fish; # Set default shell to Fish
     linger = true; # Allows user services to run without active login sessions
@@ -147,6 +149,7 @@
     dedicatedServer.openFirewall = true; # Open ports for Source Dedicated Server
     localNetworkGameTransfers.openFirewall = true; # Open ports for Steam Local Network Game Transfers
   };
+  programs.adb.enable = true; # Enable ADB for Android devices
 
   # AppImage Support
   programs.appimage.enable = true; # Enable AppImage support
@@ -159,6 +162,7 @@
   # Environment & System Packages
   environment.systemPackages = with pkgs; [
     # System Utilities
+    aria2 # Download utility
     fwupd # Firmware update daemon and utility
     gh # GitHub CLI
     git # Version control system
@@ -198,6 +202,7 @@
     discord
 
     # Development Tools
+    android-studio # Android development IDE
     unityhub # Hub for Unity game engine
     vscode.fhs # Microsoft VSCode
 
@@ -213,11 +218,9 @@
     wineWowPackages.stable # Wine for 32-bit and 64-bit applications
     winetricks # Helper script for Wine
 
-    # Mobile Development
-    android-tools # Android SDK platform tools (adb, fastboot)
-
     # Language Specific Development
     # C/C++
+    clang-tools
     cmake
     gcc
     # DotNet
@@ -226,13 +229,18 @@
     # JVM
     gradle
     openjdk
+    # LaTeX
+    texlive.combined.scheme-full
     #Nix
+    nil
     nixfmt-rfc-style
     # Node.js
     nodejs
     pnpm
+    nodePackages.prettier
     # Python
     python3
+    ruff # Python linter
     uv # Python package installer/resolver
     # TypeScript
     typescript

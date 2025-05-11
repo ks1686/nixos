@@ -16,12 +16,14 @@
     "editor.defaultFormatter": "charliermarsh.ruff"
   },
   "[nix]": {
-    "editor.formatOnSave": false,
     "editor.defaultFormatter": "jnoortheen.nix-ide"
   },
   "[fish]": {
     "editor.defaultFormatter": "bmalehorn.vscode-fish"
   },
   "explorer.confirmDelete": false,
-  "git.autofetch": true
+  "git.autofetch": true,
+  "update.mode": "none",
+  "git.confirmSync": false,
+  "explorer.confirmDragAndDrop": false
 }
