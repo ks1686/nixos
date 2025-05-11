@@ -14,8 +14,17 @@
   # Kernel
   boot.kernelPackages = pkgs.linuxPackages_latest; # Use the latest stable kernel
 
+  # Nix
+  nix.settings = {
+    # Nix settings
+    cores = 4; # Number of CPU cores to use for builds
+    max-jobs = 1; # Maximum number of jobs to run in parallel
+    auto-optimise-store = true; # Automatically optimize the Nix store
+  };
+
   # Nixpkgs
   nixpkgs.config.allowUnfree = true; # Allow installation of unfree packages
+  # nixpkgs.config.cudaSupport = true; # Enable CUDA support
 
   # Localization & Time
   time.timeZone = "America/New_York"; # Set your time zone
@@ -41,7 +50,7 @@
   };
   hardware.nvidia = {
     # NVIDIA specific settings
-    package = config.boot.kernelPackages.nvidiaPackages.beta; # Use beta drivers
+    package = config.boot.kernelPackages.nvidiaPackages.stable; # Use beta drivers
     open = false; # Use the proprietary kernel module
   };
 
@@ -67,17 +76,30 @@
   services.xserver = {
     enable = true;
     videoDrivers = [
-      "nvidia"
       "amdgpu"
+      "nvidia"
     ]; # Graphics drivers for Xorg
     xkb = {
       # Keyboard layout
       layout = "us";
       variant = "";
     };
+    displayManager.gdm.enable = true; # Enable GDM as the display manager
+    desktopManager.gnome.enable = true; # Enable GNOME desktop environment
   };
-  services.displayManager.sddm.enable = true; # Enable SDDM display manager
-  services.desktopManager.plasma6.enable = true; # Enable KDE Plasma 6 Desktop
+  environment.gnome.excludePackages = with pkgs; [
+    gnome-calculator
+    gnome-connections
+    gnome-maps
+    gnome-software
+    gnome-text-editor
+    gnome-tour
+    gnome-user-docs
+    gnome-weather
+    simple-scan
+    snapshot
+    yelp
+  ];
 
   # Sound
   services.pulseaudio.enable = false; # Disable PulseAudio (using PipeWire)
@@ -95,7 +117,7 @@
   programs.gnupg.agent = {
     # GnuPG agent settings
     enable = true;
-    pinentryPackage = pkgs.pinentry-qt; # Use Qt-based pinentry
+    pinentryPackage = pkgs.pinentry-gnome3; # Use Qt-based pinentry
     enableSSHSupport = true; # Enable SSH agent support
   };
 
@@ -138,11 +160,10 @@
 
   # Fonts
   fonts.packages = with pkgs; [
-    nerd-fonts.hack # Example: Hack Nerd Font
+    nerd-fonts.adwaita-mono # Adwaita Mono Nerd Font
   ];
 
   # Programs & Applications (System-wide configurations)
-  programs.firefox.enable = true; # Basic Firefox integration
   programs.steam = {
     enable = true;
     remotePlay.openFirewall = true; # Open ports for Steam Remote Play
@@ -154,6 +175,16 @@
   # AppImage Support
   programs.appimage.enable = true; # Enable AppImage support
   programs.appimage.binfmt = true; # Register AppImages with binfmt_misc
+
+  # Flatpak Support
+  services.flatpak.enable = true; # Enable Flatpak support
+  systemd.services.flatpak-repo = {
+    wantedBy = [ "multi-user.target" ];
+    path = [ pkgs.flatpak ];
+    script = ''
+      flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+    '';
+  };
 
   # Virtualization & Containers
   virtualisation.docker.enable = true; # Enable Docker daemon
@@ -172,6 +203,7 @@
     rm-improved # Safer rm alternative
     qemu # Generic machine emulator and virtualizer
     quickemu # Utility to quickly create and run virtual machines
+    yt-dlp
 
     # Shell Enhancements & Tools
     fishPlugins.bass
@@ -181,22 +213,34 @@
     lazygit # TUI for git
     lazydocker # TUI for docker
 
+    # GNOME
+    dconf-editor # GNOME dconf editor
+    gnome-tweaks # Tweaks for GNOME
+    gnomeExtensions.arcmenu # Arc Menu extension
+    gnomeExtensions.caffeine # Caffeine extension to prevent sleep
+    gnomeExtensions.clipboard-indicator # Clipboard manager
+    gnomeExtensions.dash-to-dock # Dash to Dock extension
+    gnomeExtensions.disable-3-finger-gestures # Disable 3-finger gestures
+    gnomeExtensions.gpu-supergfxctl-switch # Control graphics switching
+    gnomeExtensions.impatience # Remove GNOME shell delay
+    gnomeExtensions.just-perfection # GNOME shell tweaks
+    gnomeExtensions.night-theme-switcher # Night theme switcher
+    gnomeExtensions.tiling-assistant # Tiling assistant for GNOME
+
     # Desktop Tools & Utilities
+    audacity # Audio editing software
     blender # 3D creation suite
+    bottles # Windows application manager
+    davinci-resolve # Video editing software
+    fsearch # File search utility
     gearlever # Manage AppImages
-    haruna # Video player from KDE Gear
-    kdePackages.kdenlive # Video editing software from KDE Gear
-    kdiff3 # File comparison tool from KDE Gear
-    kdePackages.kfind # File search utility from KDE Gear
-    kdePackages.kleopatra # Encryption and signing tool from KDE Gear
-    kdePackages.koi # Image viewer from KDE Gear
-    krita # Digital painting application from KDE Gear
-    kdePackages.kwave # Audio editor from KDE Gear
-    kdePackages.partitionmanager # Disk partitioning tool from KDE Gear
-    supergfxctl-plasmoid # Plasma widget for supergfxctl
+    gparted # Partition editor
+    protonplus # Proton Manager
+    prusa-slicer # 3D printing slicer
 
     # Browsers
-    google-chrome
+    google-chrome # Google Chrome
+    tor-browser # Tor Browser for anonymous browsing
 
     # Communications
     discord
@@ -206,7 +250,9 @@
     unityhub # Hub for Unity game engine
     vscode.fhs # Microsoft VSCode
 
-    # AI Tools (CLI/Libraries)
+    # AI Tools
+    alpaca # LLM GUI
+    # cudatoolkit # CUDA support for AI tools
     ollama # CLI for Ollama
 
     # Gaming
@@ -216,7 +262,6 @@
 
     # Wine & Windows Compatibility
     wineWowPackages.stable # Wine for 32-bit and 64-bit applications
-    winetricks # Helper script for Wine
 
     # Language Specific Development
     # C/C++
@@ -239,8 +284,9 @@
     pnpm
     nodePackages.prettier
     # Python
+
     python3
-    ruff # Python linter
+    ruff # Python linter/formatter
     uv # Python package installer/resolver
     # TypeScript
     typescript
