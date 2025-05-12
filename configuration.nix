@@ -235,7 +235,7 @@
     gparted # Partition editor
     protonplus # Proton Manager
     prusa-slicer # 3D printing slicer
-    timeshift # System backup and restore utility
+    
 
     # Browsers
     google-chrome # Google Chrome
