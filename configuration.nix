@@ -16,15 +16,12 @@
 
   # Nix
   nix.settings = {
-    # Nix settings
-    cores = 4; # Number of CPU cores to use for builds
-    max-jobs = 1; # Maximum number of jobs to run in parallel
     auto-optimise-store = true; # Automatically optimize the Nix store
   };
 
   # Nixpkgs
   nixpkgs.config.allowUnfree = true; # Allow installation of unfree packages
-  # nixpkgs.config.cudaSupport = true; # Enable CUDA support
+  nixpkgs.config.cudaSupport = true; # Enable CUDA support
 
   # Localization & Time
   time.timeZone = "America/New_York"; # Set your time zone
@@ -197,6 +194,7 @@
     fwupd # Firmware update daemon and utility
     gh # GitHub CLI
     git # Version control system
+    gnumake
     gnupg # For GPG key management
     hunspell # Spell checker
     hunspellDicts.en-us-large # English dictionary for Hunspell
@@ -237,6 +235,7 @@
     gparted # Partition editor
     protonplus # Proton Manager
     prusa-slicer # 3D printing slicer
+    timeshift # System backup and restore utility
 
     # Browsers
     google-chrome # Google Chrome
@@ -247,13 +246,15 @@
 
     # Development Tools
     android-studio # Android development IDE
+    jetbrains.rider # JetBrains Rider for .NET development
     unityhub # Hub for Unity game engine
     vscode.fhs # Microsoft VSCode
 
     # AI Tools
     alpaca # LLM GUI
-    # cudatoolkit # CUDA support for AI tools
+    cudatoolkit # CUDA support for AI tools
     ollama # CLI for Ollama
+    opencv # OpenCV for computer vision
 
     # Gaming
     heroic # Epic Games and GOG launcher
@@ -261,6 +262,7 @@
     prismlauncher # Minecraft launcher
 
     # Wine & Windows Compatibility
+    dxvk # DirectX to Vulkan translation layer
     wineWowPackages.stable # Wine for 32-bit and 64-bit applications
 
     # Language Specific Development
