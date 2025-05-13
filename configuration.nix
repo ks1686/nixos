@@ -17,6 +17,7 @@
   # Nix
   nix.settings = {
     auto-optimise-store = true; # Automatically optimize the Nix store
+    max-jobs = 2;
   };
 
   # Nixpkgs
@@ -47,8 +48,23 @@
   };
   hardware.nvidia = {
     # NVIDIA specific settings
-    package = config.boot.kernelPackages.nvidiaPackages.stable; # Use beta drivers
-    open = false; # Use the proprietary kernel module
+    package = config.boot.kernelPackages.nvidiaPackages.stable; # Use stable drivers
+    open = true; # Use the open kernel module
+
+    powerManagement = {
+      # NVIDIA power management settings
+      enable = true;
+    };
+
+    prime = {
+      offload = {
+        enable = true;
+      };
+
+      # Bus IDs
+      amdgpuBusId = "PCI:101:0:0"; # AMD GPU bus ID
+      nvidiaBusId = "PCI:1:0:0"; # NVIDIA GPU bus ID
+    };
   };
 
   # Laptop-specific Hardware Services
@@ -85,13 +101,20 @@
     desktopManager.gnome.enable = true; # Enable GNOME desktop environment
   };
   environment.gnome.excludePackages = with pkgs; [
+    geary
     gnome-calculator
+    gnome-calendar
+    gnome-clocks
     gnome-connections
+    gnome-contacts
+    epiphany
     gnome-maps
+    gnome-online-accounts
     gnome-software
     gnome-text-editor
     gnome-tour
     gnome-user-docs
+    gnome-user-share
     gnome-weather
     simple-scan
     snapshot
@@ -213,11 +236,14 @@
 
     # GNOME
     dconf-editor # GNOME dconf editor
+    gnomecast # Cast to Chromecast devices
+    gnome-boxes # Virtual machine manager for GNOME
     gnome-tweaks # Tweaks for GNOME
     gnomeExtensions.arcmenu # Arc Menu extension
     gnomeExtensions.caffeine # Caffeine extension to prevent sleep
     gnomeExtensions.clipboard-indicator # Clipboard manager
     gnomeExtensions.dash-to-dock # Dash to Dock extension
+    gnomeExtensions.docker # Docker extension for GNOME
     gnomeExtensions.disable-3-finger-gestures # Disable 3-finger gestures
     gnomeExtensions.gpu-supergfxctl-switch # Control graphics switching
     gnomeExtensions.impatience # Remove GNOME shell delay
@@ -235,10 +261,10 @@
     gparted # Partition editor
     protonplus # Proton Manager
     prusa-slicer # 3D printing slicer
-    
+    thunderbird # Email client
 
     # Browsers
-    google-chrome # Google Chrome
+    google-chrome # Google Browser
     tor-browser # Tor Browser for anonymous browsing
 
     # Communications
@@ -246,6 +272,8 @@
 
     # Development Tools
     android-studio # Android development IDE
+    jetbrains.idea-ultimate
+    jetbrains.pycharm-professional
     jetbrains.rider # JetBrains Rider for .NET development
     unityhub # Hub for Unity game engine
     vscode.fhs # Microsoft VSCode
