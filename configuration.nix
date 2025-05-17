@@ -1,32 +1,51 @@
 { config, pkgs, ... }:
 
 {
-  # Imports
+  # =========================================================================
+  # IMPORTS
+  # =========================================================================
   imports = [
-    ./hardware-configuration.nix
+    ./hardware-configuration.nix # Hardware-specific settings
+    <home-manager/nixos> # Home Manager NixOS module
   ];
 
-  # Core System Configuration
+  # =========================================================================
+  # CORE SYSTEM SETTINGS
+  # =========================================================================
+
   # Bootloader
-  boot.loader.systemd-boot.enable = true;
-  boot.loader.efi.canTouchEfiVariables = true;
+  boot = {
+    loader = {
+      systemd-boot.enable = true;
+      efi.canTouchEfiVariables = true;
+    };
 
-  # Kernel
-  boot.kernelPackages = pkgs.linuxPackages_latest; # Use the latest stable kernel
+    # LUKS Encryption
+    initrd.luks.devices."luks-34912701-e81c-43b5-a982-429caa687aab".device =
+      "/dev/disk/by-uuid/34912701-e81c-43b5-a982-429caa687aab"; # LUKS partition
 
-  # Nix
-  nix.settings = {
-    auto-optimise-store = true; # Automatically optimize the Nix store
-    max-jobs = 2;
+    # Enable zswap with recommended settings
+    kernelParams = [
+      "zswap.enabled=1"
+      "zswap.compressor=lz4"
+      "zswap.max_pool_percent=20"
+    ];
   };
 
-  # Nixpkgs
-  nixpkgs.config.allowUnfree = true; # Allow installation of unfree packages
-  nixpkgs.config.cudaSupport = true; # Enable CUDA support
+  # Nix Configuration
+  nix.settings = {
+    auto-optimise-store = true; # Optimize Nix store
+    max-jobs = 1; # Parallel build jobs
+    cores = 1; # Number of CPU cores
+  };
+  nixpkgs.config = {
+    allowUnfree = true; # Allow non-free packages
+    cudaSupport = true; # Enable CUDA support
+  };
 
-  # Localization & Time
-  time.timeZone = "America/New_York"; # Set your time zone
-  i18n.defaultLocale = "en_US.UTF-8"; # Default locale settings
+  # Internationalization & Localization
+  time.timeZone = "America/New_York"; # System timezone
+  i18n.defaultLocale = "en_US.UTF-8"; # Default locale
   i18n.extraLocaleSettings = {
     # Detailed locale settings
     LC_ADDRESS = "en_US.UTF-8";
@@ -40,38 +59,32 @@
     LC_TIME = "en_US.UTF-8";
   };
 
-  # Hardware Configuration
+  # System State
+  system.stateVersion = "25.05"; # NixOS version for stateful settings
+
+  # =========================================================================
+  # HARDWARE SUPPORT
+  # =========================================================================
+
   # Graphics
-  hardware.graphics = {
-    enable = true; # Enable general graphics support
-    extraPackages = with pkgs; [ nvidia-vaapi-driver ]; # VA-API for NVIDIA
-  };
+  hardware.graphics.enable = true; # General graphics support
   hardware.nvidia = {
-    # NVIDIA specific settings
-    package = config.boot.kernelPackages.nvidiaPackages.stable; # Use stable drivers
-    open = true; # Use the open kernel module
-
-    powerManagement = {
-      # NVIDIA power management settings
-      enable = true;
-    };
-
+    modesetting.enable = true; # Kernel modesetting
+    powerManagement.enable = false; # NVIDIA power management (tune for laptops)
+    powerManagement.finegrained = false;
+    open = true; # Use open-source NVIDIA kernel module
+    nvidiaSettings = true; # Install NVIDIA settings application
+    package = config.boot.kernelPackages.nvidiaPackages.stable; # Stable NVIDIA drivers
     prime = {
-      offload = {
-        enable = true;
-      };
-
-      # Bus IDs
-      amdgpuBusId = "PCI:101:0:0"; # AMD GPU bus ID
-      nvidiaBusId = "PCI:1:0:0"; # NVIDIA GPU bus ID
+      amdgpuBusId = "PCI:101:0:0"; # AMD GPU bus ID for PRIME
+      nvidiaBusId = "PCI:1:0:0"; # NVIDIA GPU bus ID for PRIME
     };
   };
 
-  # Laptop-specific Hardware Services
-  services.supergfxd.enable = true; # For graphics switching control on laptops
+  # Laptop Specific Features
+  services.supergfxd.enable = true; # Graphics switching control (e.g., ASUS laptops)
   services.asusd = {
-    # For ASUS laptop specific controls
-    enable = true;
+    enable = true; # ASUS laptop specific controls (fans, keyboard)
     enableUserService = true;
   };
 
@@ -79,85 +92,105 @@
   hardware.bluetooth.enable = true; # Enable Bluetooth
   hardware.bluetooth.powerOnBoot = true; # Power on Bluetooth at boot
 
-  # Networking
-  networking.hostName = "nixos"; # Define your hostname
-  networking.networkmanager.enable = true; # Enable NetworkManager
-  services.tailscale.enable = true; # Enable Tailscale VPN
+  # Audio (PipeWire)
+  services.pulseaudio.enable = false; # Disable PulseAudio (using PipeWire)
+  security.rtkit.enable = true; # Real-time Kit for low audio latency
+  services.pipewire = {
+    enable = true; # Enable PipeWire media server
+    alsa.enable = true; # ALSA support via PipeWire
+    alsa.support32Bit = true; # 32-bit ALSA support
+    pulse.enable = true; # PipeWire's PulseAudio compatibility
+  };
 
-  # Services
-  # Display & Desktop Environment
+  # Printing
+  services.printing.enable = true; # Enable CUPS printing service
+  services.printing.drivers = [ pkgs.hplip ]; # HP printer drivers
+
+  # =========================================================================
+  # NETWORKING
+  # =========================================================================
+  networking.hostName = "nixos"; # System hostname
+  networking.networkmanager.enable = true; # NetworkManager for connection management
+  services.tailscale.enable = true; # Tailscale VPN service
+
+  # Service Discovery (mDNS)
+  services.avahi = {
+    enable = true; # Enable Avahi daemon
+    nssmdns4 = true; # mDNS for IPv4 hostname resolution
+    openFirewall = true; # Open firewall for Avahi
+  };
+
+  # Backup & Restore
+  services.borgbackup.jobs.home = {
+    paths = [ "/home/ks1686" ]; # Backup paths
+    repo = "/backup/ks1686"; # Backup repository
+    compression = "auto,zstd"; # Compression method
+    encryption = {
+      mode = "repokey"; # Encryption mode
+      passCommand = "cat /backup/backup_passphrase.txt"; # Passphrase command
+    };
+    startAt = "hourly"; # Backup frequency
+    exclude = [
+      "home/ks1686/Android"
+      "/home/ks1686/AppImages"
+      "/home/ks1686/Games"
+      "/home/ks1686/InvokeAI/models"
+      "/home/ks1686/Unity"
+      "/home/ks1686/.android"
+      "/home/ks1686/.cache"
+      "/home/ks1686/.local"
+      "/home/ks1686/.steam"
+      "/home/ks1686/.vscode/extensions"
+      "**/*.tmp"
+      "**/*.log"
+
+    ]; # Excluded paths
+    prune.keep = {
+      hourly = 12; # Keep 12 hourly backups
+    };
+  };
+
+  # =========================================================================
+  # SERVICES & DESKTOP ENVIRONMENT
+  # =========================================================================
+
+  # X11 Server & Desktop Environment
   services.xserver = {
-    enable = true;
+    enable = true; # Enable X11 windowing system
     videoDrivers = [
-      "amdgpu"
       "nvidia"
-    ]; # Graphics drivers for Xorg
+      "amdgpu"
+    ]; # X server graphics drivers
     xkb = {
-      # Keyboard layout
+      # Xorg keyboard layout
       layout = "us";
       variant = "";
     };
-    displayManager.gdm.enable = true; # Enable GDM as the display manager
-    desktopManager.gnome.enable = true; # Enable GNOME desktop environment
+    displayManager.gdm.enable = true; # GDM (GNOME Display Manager)
+    desktopManager.gnome.enable = true; # GNOME desktop environment
   };
+
+  # Minimal GNOME Installation
   environment.gnome.excludePackages = with pkgs; [
-    geary
+    epiphany
     gnome-calculator
-    gnome-calendar
     gnome-clocks
     gnome-connections
-    gnome-contacts
-    epiphany
     gnome-maps
-    gnome-online-accounts
     gnome-software
     gnome-text-editor
     gnome-tour
     gnome-user-docs
-    gnome-user-share
     gnome-weather
-    simple-scan
-    snapshot
     yelp
   ];
 
-  # Sound
-  services.pulseaudio.enable = false; # Disable PulseAudio (using PipeWire)
-  security.rtkit.enable = true; # Real-time kit for better audio performance
-  services.pipewire = {
-    # PipeWire sound server
-    enable = true;
-    alsa.enable = true;
-    alsa.support32Bit = true;
-    pulse.enable = true; # Enables PipeWire's PulseAudio replacement
-  };
+  # Secure Shell (SSH)
+  services.openssh.enable = true; # Enable OpenSSH daemon
 
-  # GPG Agent
-  services.pcscd.enable = true; # Smart card daemon, often used with GPG
-  programs.gnupg.agent = {
-    # GnuPG agent settings
-    enable = true;
-    pinentryPackage = pkgs.pinentry-gnome3; # Use Qt-based pinentry
-    enableSSHSupport = true; # Enable SSH agent support
-  };
-
-  # Printing
-  services.printing.enable = true; # Enable CUPS for printing
-  services.printing.drivers = [ pkgs.hplip ]; # HP printer drivers
-  services.avahi = {
-    enable = true;
-    nssmdns4 = true;
-    openFirewall = true;
-  };
-
-  # Ollama AI Service
-  services.ollama = {
-    # Ollama LLM service
-    enable = true;
-    acceleration = "cuda"; # Use CUDA for acceleration
-  };
-
-  # User Configuration
+  # =========================================================================
+  # USER MANAGEMENT
+  # =========================================================================
   users.users.ks1686 = {
     isNormalUser = true;
     description = "Karim Smires";
@@ -167,172 +200,180 @@
       "docker"
       "kvm"
       "adbusers"
-    ]; # Sudo, network, docker access
-    shell = pkgs.fish; # Set default shell to Fish
-    linger = true; # Allows user services to run without active login sessions
+      "video"
+    ];
+    shell = pkgs.fish;
+    linger = true; # Allow user processes to run after logout
     packages = with pkgs; [
-      # User-specific packages can be added here if not system-wide
+      # User-specific packages defined via Home Manager
     ];
   };
 
-  # Shell Configuration (System-wide)
-  programs.fish.enable = true; # Make Fish shell available and configure it globally
+  # Home Manager Integration
+  home-manager = {
+    useGlobalPkgs = true;
+    useUserPackages = true;
+    backupFileExtension = "bak";
+    users = {
+      ks1686 = {
+        imports = [ ./home-ks1686.nix ]; # Path to user's Home Manager config
+      };
+    };
+  };
 
-  # Fonts
+  # =========================================================================
+  # SHELL & ENVIRONMENT
+  # =========================================================================
+  programs.fish.enable = true; # Enable Fish shell system-wide
+  environment.variables.EDITOR = "code"; # Default system editor
+
+  # Default Applications (XDG Mimeapps)
+  xdg.mime.defaultApplications = {
+    "text/plain" = "code";
+    "text/x-toml" = "code";
+  };
+
+  # =========================================================================
+  # FONTS
+  # =========================================================================
   fonts.packages = with pkgs; [
     nerd-fonts.adwaita-mono # Adwaita Mono Nerd Font
   ];
 
-  # Programs & Applications (System-wide configurations)
+  # =========================================================================
+  # SYSTEM-WIDE PROGRAM FEATURES
+  # =========================================================================
   programs.steam = {
     enable = true;
-    remotePlay.openFirewall = true; # Open ports for Steam Remote Play
-    dedicatedServer.openFirewall = true; # Open ports for Source Dedicated Server
-    localNetworkGameTransfers.openFirewall = true; # Open ports for Steam Local Network Game Transfers
-  };
-  programs.adb.enable = true; # Enable ADB for Android devices
-
-  # AppImage Support
-  programs.appimage.enable = true; # Enable AppImage support
-  programs.appimage.binfmt = true; # Register AppImages with binfmt_misc
-
-  # Flatpak Support
-  services.flatpak.enable = true; # Enable Flatpak support
-  systemd.services.flatpak-repo = {
-    wantedBy = [ "multi-user.target" ];
-    path = [ pkgs.flatpak ];
-    script = ''
-      flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-    '';
+    remotePlay.openFirewall = true;
+    dedicatedServer.openFirewall = true;
+    localNetworkGameTransfers.openFirewall = true;
   };
 
-  # Virtualization & Containers
+  programs.adb.enable = true; # Android Debug Bridge support
+
+  programs.appimage = {
+    enable = true; # AppImage support
+    binfmt = true; # Direct execution of AppImages
+  };
+
+  # =========================================================================
+  # VIRTUALIZATION & CONTAINERIZATION
+  # =========================================================================
   virtualisation.docker.enable = true; # Enable Docker daemon
-  hardware.nvidia-container-toolkit.enable = true; # Enable NVIDIA support for Docker containers
+  hardware.nvidia-container-toolkit.enable = true; # NVIDIA GPU support for Docker
 
-  # Environment & System Packages
+  # =========================================================================
+  # INSTALLED PACKAGES (SYSTEM-WIDE)
+  # =========================================================================
   environment.systemPackages = with pkgs; [
-    # System Utilities
+    # --- System Utilities ---
     aria2 # Download utility
-    fwupd # Firmware update daemon and utility
-    gh # GitHub CLI
-    git # Version control system
-    gnumake
-    gnupg # For GPG key management
+    fwupd # Firmware update utility
+    gnumake # GNU Make
     hunspell # Spell checker
-    hunspellDicts.en-us-large # English dictionary for Hunspell
-    rm-improved # Safer rm alternative
-    qemu # Generic machine emulator and virtualizer
-    quickemu # Utility to quickly create and run virtual machines
-    yt-dlp
+    hunspellDicts.en-us-large # English dictionary
+    rm-improved # Safer 'rm'
+    rsync # File synchronization
+    tlrc # TLDR pages
+    qemu # Machine emulator and virtualizer
+    quickemu # VM creation utility
+    yt-dlp # Video downloader
 
-    # Shell Enhancements & Tools
-    fishPlugins.bass
-    fishPlugins.done
-    fishPlugins.forgit
-    fishPlugins.plugin-sudope
-    lazygit # TUI for git
-    lazydocker # TUI for docker
+    # --- Shell Enhancements ---
+    lazydocker # TUI for Docker
 
-    # GNOME
+    # --- GNOME Desktop Utilities & Extensions ---
     dconf-editor # GNOME dconf editor
-    gnomecast # Cast to Chromecast devices
-    gnome-boxes # Virtual machine manager for GNOME
-    gnome-tweaks # Tweaks for GNOME
-    gnomeExtensions.arcmenu # Arc Menu extension
-    gnomeExtensions.caffeine # Caffeine extension to prevent sleep
+    gnomecast # Cast to Chromecast
+    gnome-boxes # VM manager for GNOME
+    gnome-tweaks # GNOME Tweak Tool
+    gnomeExtensions.gpu-supergfxctl-switch # Graphics switching extension
+    gnomeExtensions.tiling-assistant # Tiling assistant
+    gnomeExtensions.arcmenu # Arc Menu
+    gnomeExtensions.caffeine # Prevent sleep/screensaver
     gnomeExtensions.clipboard-indicator # Clipboard manager
-    gnomeExtensions.dash-to-dock # Dash to Dock extension
-    gnomeExtensions.docker # Docker extension for GNOME
-    gnomeExtensions.disable-3-finger-gestures # Disable 3-finger gestures
-    gnomeExtensions.gpu-supergfxctl-switch # Control graphics switching
-    gnomeExtensions.impatience # Remove GNOME shell delay
-    gnomeExtensions.just-perfection # GNOME shell tweaks
+    gnomeExtensions.dash-to-dock # Dash to Dock
+    gnomeExtensions.just-perfection # GNOME Shell tweaks
     gnomeExtensions.night-theme-switcher # Night theme switcher
-    gnomeExtensions.tiling-assistant # Tiling assistant for GNOME
 
-    # Desktop Tools & Utilities
-    audacity # Audio editing software
+    # --- General Tools ---
+    audacity # Audio editor
     blender # 3D creation suite
-    bottles # Windows application manager
+    borgbackup # Deduplicating backup tool
+    bottles # Windows application manager (via Wine)
     davinci-resolve # Video editing software
+    freecad-wayland # 3D CAD modeler
     fsearch # File search utility
-    gearlever # Manage AppImages
+    gearlever # AppImage manager
     gparted # Partition editor
-    protonplus # Proton Manager
+    obs-studio # Video recording and streaming
+    protonplus # Proton manager for Steam Play
     prusa-slicer # 3D printing slicer
-    thunderbird # Email client
+    ytmdesktop # YouTube Music desktop client
 
-    # Browsers
-    google-chrome # Google Browser
-    tor-browser # Tor Browser for anonymous browsing
+    # --- Web Browsers ---
+    google-chrome # Google Chrome
+    tor-browser # Tor Browser
 
-    # Communications
-    discord
+    # --- Communication Tools ---
+    betterdiscordctl # BetterDiscord manager
+    discord # Discord client
 
-    # Development Tools
-    android-studio # Android development IDE
-    jetbrains.idea-ultimate
-    jetbrains.pycharm-professional
-    jetbrains.rider # JetBrains Rider for .NET development
-    unityhub # Hub for Unity game engine
-    vscode.fhs # Microsoft VSCode
+    # --- Development Environment ---
+    # IDEs & General Dev Tools
+    android-studio # Android IDE
+    jetbrains.clion # CLion (C/C++ IDE)
+    jetbrains.idea-ultimate # IntelliJ IDEA Ultimate
+    jetbrains.pycharm-professional # PyCharm Professional
+    jetbrains.rider # JetBrains Rider (.NET IDE)
+    jetbrains.rust-rover # Rust Rover (Rust IDE)
+    jetbrains.webstorm # WebStorm (JavaScript IDE)
+    # quartus-prime-lite # Intel FPGA development software
+    unityhub # Unity game engine hub
+    vscode.fhs # Visual Studio Code (FHS env)
 
-    # AI Tools
-    alpaca # LLM GUI
-    cudatoolkit # CUDA support for AI tools
-    ollama # CLI for Ollama
-    opencv # OpenCV for computer vision
+    # AI/ML Libraries
+    cudatoolkit # CUDA Toolkit
+    opencv # OpenCV computer vision library
 
-    # Gaming
-    heroic # Epic Games and GOG launcher
-    itch # Itch.io game launcher
-    prismlauncher # Minecraft launcher
-
-    # Wine & Windows Compatibility
-    dxvk # DirectX to Vulkan translation layer
-    wineWowPackages.stable # Wine for 32-bit and 64-bit applications
-
-    # Language Specific Development
+    # Language Toolchains
     # C/C++
-    clang-tools
-    cmake
-    gcc
-    # DotNet
-    dotnet-sdk
-    mono
+    clang-tools # Clang tooling
+    cmake # Build system generator
+    gcc # GNU Compiler Collection
+    # .NET
+    dotnet-sdk # .NET SDK
+    mono # Open source .NET Framework
     # JVM
-    gradle
-    openjdk
+    gradle # JVM build tool
+    openjdk # OpenJDK
     # LaTeX
-    texlive.combined.scheme-full
-    #Nix
-    nil
-    nixfmt-rfc-style
+    texlive.combined.scheme-full # Full TeX Live
+    # Nix
+    nil # Nix Language Server
+    nixfmt-rfc-style # Nix code formatter
     # Node.js
-    nodejs
-    pnpm
-    nodePackages.prettier
+    nodejs # Node.js runtime
+    pnpm # Node.js package manager
+    nodePackages.prettier # Code formatter
     # Python
-
-    python3
+    python3 # Python 3
     ruff # Python linter/formatter
     uv # Python package installer/resolver
+    # Rust
+    cargo # Rust package manager
+    rustc # Rust compiler
     # TypeScript
-    typescript
+    typescript # TypeScript language support
+
+    # --- Gaming Clients & Tools ---
+    heroic # Epic Games & GOG launcher
+    itch # Itch.io client
+    prismlauncher # Minecraft launcher
+
+    # --- Windows Compatibility ---
+    dxvk # DirectX to Vulkan translation
+    wineWowPackages.stable # Wine (32-bit and 64-bit)
   ];
-
-  # Environment Variables
-  environment.sessionVariables = {
-    # Example: Add custom paths for user scripts
-    PATH = [
-      "/home/ks1686/.local/share/JetBrains/Toolbox/scripts"
-      "\${PATH}"
-    ];
-  };
-
-  # System State
-  # This should match the NixOS version you initially installed or upgraded to.
-  # Do not change this simply to upgrade NixOS. Instead, use 'nixos-rebuild switch --upgrade'.
-  system.stateVersion = "25.05";
 }
