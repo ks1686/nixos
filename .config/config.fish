@@ -1,15 +1,7 @@
-# Commands for interactive sessions
-if status is-interactive
-    # Commands to run in interactive sessions can go here
-end
-
-# System and Configuration Management
-alias nixconf 'env VISUAL="code --wait" sudoedit /etc/nixos/configuration.nix'
-alias nixbuild 'sudo nixos-rebuild switch --upgrade'
-alias nixclean "sudo nix-collect-garbage -d; sudo /run/current-system/bin/switch-to-configuration boot"
-
-# Navigation and File Management
-alias conf "code /home/ks1686/.config/"
-
-# Convenience Aliases
 alias c clear
+alias fishconf 'code ~/.config/fish/config.fish'
+alias mount_umbrel 'sudo mount -t cifs "//umbrel.emerald-themis.ts.net/karim smires\'s umbrel" ~/Umbrel -o credentials=/home/ks1686/.smbcredentials_umbrel,uid=(id -u),gid=(id -g),iocharset=utf8,nofail'
+alias umount_umbrel 'sudo umount ~/Umbrel'
+
+set -gx EDITOR /usr/bin/nano
+set -gx VISUAL /usr/bin/nano
