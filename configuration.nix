@@ -6,7 +6,6 @@
   # =========================================================================
   imports = [
     ./hardware-configuration.nix # Hardware-specific settings
-    <home-manager/nixos> # Home Manager NixOS module
   ];
 
   # =========================================================================
@@ -14,33 +13,21 @@
   # =========================================================================
 
   # Bootloader
-  boot = {
-    loader = {
-      systemd-boot.enable = true;
-      efi.canTouchEfiVariables = true;
-    };
-
-    # LUKS Encryption
-    initrd.luks.devices."luks-34912701-e81c-43b5-a982-429caa687aab".device =
-      "/dev/disk/by-uuid/34912701-e81c-43b5-a982-429caa687aab"; # LUKS partition
-
-    # Enable zswap with recommended settings
-    kernelParams = [
-      "zswap.enabled=1"
-      "zswap.compressor=lz4"
-      "zswap.max_pool_percent=20"
-    ];
+  boot.loader = {
+    systemd-boot.enable = true;
+    efi.canTouchEfiVariables = true;
   };
+
+  # LUKS Encryption
+  boot.initrd.luks.devices."luks-09124d87-d012-4b1d-8f86-037db7f25b8b".device =
+    "/dev/disk/by-uuid/09124d87-d012-4b1d-8f86-037db7f25b8b"; # LUKS partition
 
   # Nix Configuration
   nix.settings = {
-    auto-optimise-store = true; # Optimize Nix store
-    max-jobs = 1; # Parallel build jobs
-    cores = 1; # Number of CPU cores
+    auto-optimise-store = true;
   };
   nixpkgs.config = {
     allowUnfree = true; # Allow non-free packages
-    cudaSupport = true; # Enable CUDA support
   };
 
   # Internationalization & Localization
@@ -100,11 +87,18 @@
     alsa.enable = true; # ALSA support via PipeWire
     alsa.support32Bit = true; # 32-bit ALSA support
     pulse.enable = true; # PipeWire's PulseAudio compatibility
+    # If you want to use JACK applications, uncomment this
+    #jack.enable = true;
+
+    # use the example session manager (no others are packaged yet so this is enabled by default,
+    # no need to redefine it in your config for now)
+    #media-session.enable = true;
   };
 
   # Printing
   services.printing.enable = true; # Enable CUPS printing service
   services.printing.drivers = [ pkgs.hplip ]; # HP printer drivers
+
 
   # =========================================================================
   # NETWORKING
@@ -120,74 +114,24 @@
     openFirewall = true; # Open firewall for Avahi
   };
 
-  # Backup & Restore
-  services.borgbackup.jobs.home = {
-    paths = [ "/home/ks1686" ]; # Backup paths
-    repo = "/backup/ks1686"; # Backup repository
-    compression = "auto,zstd"; # Compression method
-    encryption = {
-      mode = "repokey"; # Encryption mode
-      passCommand = "cat /backup/backup_passphrase.txt"; # Passphrase command
-    };
-    startAt = "hourly"; # Backup frequency
-    exclude = [
-      "home/ks1686/Android"
-      "/home/ks1686/AppImages"
-      "/home/ks1686/Games"
-      "/home/ks1686/InvokeAI/models"
-      "/home/ks1686/Unity"
-      "/home/ks1686/.android"
-      "/home/ks1686/.cache"
-      "/home/ks1686/.local"
-      "/home/ks1686/.steam"
-      "/home/ks1686/.vscode/extensions"
-      "**/*.tmp"
-      "**/*.log"
-
-    ]; # Excluded paths
-    prune.keep = {
-      hourly = 12; # Keep 12 hourly backups
-    };
-  };
-
   # =========================================================================
   # SERVICES & DESKTOP ENVIRONMENT
   # =========================================================================
 
   # X11 Server & Desktop Environment
-  services.xserver = {
-    enable = true; # Enable X11 windowing system
-    videoDrivers = [
-      "nvidia"
-      "amdgpu"
-    ]; # X server graphics drivers
-    xkb = {
-      # Xorg keyboard layout
-      layout = "us";
-      variant = "";
+  services = {
+    xserver = {
+      enable = true; # Enable X11 windowing system
+      videoDrivers = [ "nvidia" "amdgpu" ]; # X server graphics drivers
+      xkb = {
+        # Xorg keyboard layout
+        layout = "us";
+        variant = "";
+      };
     };
-    displayManager.gdm.enable = true; # GDM (GNOME Display Manager)
-    desktopManager.gnome.enable = true; # GNOME desktop environment
+    displayManager.sddm.enable = true;
+    desktopManager.plasma6.enable = true;
   };
-
-  # Minimal GNOME Installation
-  environment.gnome.excludePackages = with pkgs; [
-    epiphany
-    gnome-calculator
-    gnome-clocks
-    gnome-connections
-    gnome-maps
-    gnome-software
-    gnome-text-editor
-    gnome-tour
-    gnome-user-docs
-    gnome-weather
-    yelp
-  ];
-
-  # Secure Shell (SSH)
-  services.openssh.enable = true; # Enable OpenSSH daemon
-
   # =========================================================================
   # USER MANAGEMENT
   # =========================================================================
@@ -198,46 +142,34 @@
       "networkmanager"
       "wheel"
       "docker"
-      "kvm"
-      "adbusers"
-      "video"
     ];
     shell = pkgs.fish;
-    linger = true; # Allow user processes to run after logout
-    packages = with pkgs; [
-      # User-specific packages defined via Home Manager
+    packages = with pkgs.kdePackages; [
+      kate # Editor
+      sweeper # User cleaning tool
+      skanpage # Scan images
+      sddm-kcm # Edit SDDM using KDE
+      plasma-thunderbolt # Manage thunderbolt devices
+      partitionmanager # Manage disk devices, partitions, and file systems
+      okular # Document viewer
+      kwave # Sound editor
+      kleopatra # GUI for OpenPGP
+      kjournald # Monitor systemd-journald
+      keysmith # OTP client
+      kdenlive # Open source video editor
+      isoimagewriter # Write ISO to devices
+      gwenview # Image viewer
+      ghostwriter # Markdown
+      elisa # Music player
+      calligra # Office and graphic art suite
     ];
-  };
-
-  # Home Manager Integration
-  home-manager = {
-    useGlobalPkgs = true;
-    useUserPackages = true;
-    backupFileExtension = "bak";
-    users = {
-      ks1686 = {
-        imports = [ ./home-ks1686.nix ]; # Path to user's Home Manager config
-      };
-    };
-  };
-
-  # =========================================================================
-  # SHELL & ENVIRONMENT
-  # =========================================================================
-  programs.fish.enable = true; # Enable Fish shell system-wide
-  environment.variables.EDITOR = "code"; # Default system editor
-
-  # Default Applications (XDG Mimeapps)
-  xdg.mime.defaultApplications = {
-    "text/plain" = "code";
-    "text/x-toml" = "code";
   };
 
   # =========================================================================
   # FONTS
   # =========================================================================
   fonts.packages = with pkgs; [
-    nerd-fonts.adwaita-mono # Adwaita Mono Nerd Font
+    nerd-fonts.hack # Hack nerd font mono
   ];
 
   # =========================================================================
@@ -257,123 +189,109 @@
     binfmt = true; # Direct execution of AppImages
   };
 
+  programs.fish = {
+    enable = true; # You already have this
+    shellInit = ''
+      # User-specific settings for ks1686
+      if test "$USER" = "ks1686"
+        fish_config prompt choose astronaut
+        set -U fish_greeting ""
+
+        # Aliases
+        alias c "clear"
+        alias nixconf "kate /etc/nixos/configuration.nix"
+        alias nixbuild "sudo nixos-rebuild switch --upgrade"
+        alias nixclean "sudo nix-collect-garbage -d; sudo /run/current-system/bin/switch-to-configuration boot"
+        alias mount_umbrel 'sudo mount -t cifs "//umbrel.emerald-themis.ts.net/karim smires\'s umbrel" ~/Umbrel -o credentials=/home/ks1686/.smbcredentials_umbrel,uid=$(id -u),gid=$(id -g),iocharset=utf8,nofail'
+        alias umount_umbrel "sudo umount ~/Umbrel"
+      end
+    '';
+  };
+
   # =========================================================================
   # VIRTUALIZATION & CONTAINERIZATION
   # =========================================================================
   virtualisation.docker.enable = true; # Enable Docker daemon
   hardware.nvidia-container-toolkit.enable = true; # NVIDIA GPU support for Docker
 
+
   # =========================================================================
   # INSTALLED PACKAGES (SYSTEM-WIDE)
   # =========================================================================
   environment.systemPackages = with pkgs; [
-    # --- System Utilities ---
-    aria2 # Download utility
-    fwupd # Firmware update utility
-    gnumake # GNU Make
-    hunspell # Spell checker
-    hunspellDicts.en-us-large # English dictionary
-    rm-improved # Safer 'rm'
-    rsync # File synchronization
-    tlrc # TLDR pages
-    qemu # Machine emulator and virtualizer
-    quickemu # VM creation utility
-    yt-dlp # Video downloader
+    # --- AI and ML ---
+    cudatoolkit
+    opencv
 
-    # --- Shell Enhancements ---
-    lazydocker # TUI for Docker
+    # --- Browsers ---
+    google-chrome
 
-    # --- GNOME Desktop Utilities & Extensions ---
-    dconf-editor # GNOME dconf editor
-    gnomecast # Cast to Chromecast
-    gnome-boxes # VM manager for GNOME
-    gnome-tweaks # GNOME Tweak Tool
-    gnomeExtensions.gpu-supergfxctl-switch # Graphics switching extension
-    gnomeExtensions.tiling-assistant # Tiling assistant
-    gnomeExtensions.arcmenu # Arc Menu
-    gnomeExtensions.caffeine # Prevent sleep/screensaver
-    gnomeExtensions.clipboard-indicator # Clipboard manager
-    gnomeExtensions.dash-to-dock # Dash to Dock
-    gnomeExtensions.just-perfection # GNOME Shell tweaks
-    gnomeExtensions.night-theme-switcher # Night theme switcher
-
-    # --- General Tools ---
-    audacity # Audio editor
-    blender # 3D creation suite
-    borgbackup # Deduplicating backup tool
-    bottles # Windows application manager (via Wine)
-    davinci-resolve # Video editing software
+    # --- Creation ---
+    blender # 3D model creation suite
     freecad-wayland # 3D CAD modeler
-    fsearch # File search utility
-    gearlever # AppImage manager
-    gparted # Partition editor
-    obs-studio # Video recording and streaming
-    protonplus # Proton manager for Steam Play
+    krita # Painting application
+    obs-studio # Video recording/streaming utility
     prusa-slicer # 3D printing slicer
-    ytmdesktop # YouTube Music desktop client
 
-    # --- Web Browsers ---
-    google-chrome # Google Chrome
-    tor-browser # Tor Browser
-
-    # --- Communication Tools ---
+    # --- Communication ---
     betterdiscordctl # BetterDiscord manager
     discord # Discord client
 
-    # --- Development Environment ---
-    # IDEs & General Dev Tools
-    android-studio # Android IDE
-    jetbrains.clion # CLion (C/C++ IDE)
-    jetbrains.idea-ultimate # IntelliJ IDEA Ultimate
-    jetbrains.pycharm-professional # PyCharm Professional
-    jetbrains.rider # JetBrains Rider (.NET IDE)
-    jetbrains.rust-rover # Rust Rover (Rust IDE)
-    jetbrains.webstorm # WebStorm (JavaScript IDE)
-    # quartus-prime-lite # Intel FPGA development software
-    unityhub # Unity game engine hub
-    vscode.fhs # Visual Studio Code (FHS env)
-
-    # AI/ML Libraries
-    cudatoolkit # CUDA Toolkit
-    opencv # OpenCV computer vision library
-
-    # Language Toolchains
-    # C/C++
-    clang-tools # Clang tooling
-    cmake # Build system generator
-    gcc # GNU Compiler Collection
-    # .NET
-    dotnet-sdk # .NET SDK
-    mono # Open source .NET Framework
-    # JVM
-    gradle # JVM build tool
-    openjdk # OpenJDK
-    # LaTeX
-    texlive.combined.scheme-full # Full TeX Live
-    # Nix
-    nil # Nix Language Server
-    nixfmt-rfc-style # Nix code formatter
-    # Node.js
-    nodejs # Node.js runtime
-    pnpm # Node.js package manager
-    nodePackages.prettier # Code formatter
-    # Python
-    python3 # Python 3
-    ruff # Python linter/formatter
-    uv # Python package installer/resolver
-    # Rust
-    cargo # Rust package manager
-    rustc # Rust compiler
-    # TypeScript
-    typescript # TypeScript language support
-
-    # --- Gaming Clients & Tools ---
-    heroic # Epic Games & GOG launcher
+    # --- Gaming ---
+    heroic # Epic Games, GOG, and Amazon Launcher
     itch # Itch.io client
-    prismlauncher # Minecraft launcher
+    prismlauncher # Minecraft mod launcher
 
-    # --- Windows Compatibility ---
+    # --- IDE ---
+    android-studio # Android
+    jetbrains.clion # C/C++
+    jetbrains.idea-ultimate # Java
+    jetbrains.rider # .NET
+    jetbrains.rust-rover # Rust
+    jetbrains.webstorm # JavaScript
+
+    # --- Programming Languages ---
+    # .NET
+    dotnet-sdk
+    mono
+    # C/C++
+    gcc
+    # JVM
+    gradle
+    openjdk
+    # NodeJS
+    nodejs
+    pnpm
+    nodePackages.prettier
+    # Python
+    python3
+    ruff
+    uv
+    # Rust
+    cargo
+    rustc
+    # Typescript
+    typescript
+
+
+    # --- System ---
+    aria2 # Download utility
+    bottles # Windows application managers
     dxvk # DirectX to Vulkan translation
+    fsearch # File search utility
+    fwupd # Firmware information
+    gearlever # AppImage Manager
+    hunspell # Spell checker
+    hunspellDicts.en-us-large # English dictionary
+    lazydocker # TUI for Docker
+    rm-improved # Safer 'rm'
+    sirikali # Encryption tool
+    supergfxctl-plasmoid # Plasma integration for supergfxctl
+    tealdeer # TLDR in Rust
+    qemu # Machine virtualisation and emulation
+    quickemu # Fast virtual machines
+    quickgui # GUI for quickemu
     wineWowPackages.stable # Wine (32-bit and 64-bit)
+    yt-dlp # Video downloader
   ];
 }
